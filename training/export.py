@@ -26,6 +26,7 @@ from models import (ANN_CFG, SNN_CFG, ANN_QUANT, SNN_QUANT, ann_encode, ann_forw
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "public", "models")
 GROUP = 32
+SMALL = 32768  # elements
 
 TIERS = {
     # allowed precisions, byte budget (relative), runtime knobs
@@ -55,13 +56,13 @@ def nbytes(shape, bits):
 
 def rows_of(name, w, model):
     """Tensor in export layout: rows x cols, quantisation groups along cols."""
-    if model == "ann" and name != "emb":
+    if model == "ann" and name in ANN_QUANT and name != "emb":
         return w.T  # Linear [in,out] -> [out,in]
-    return w
+    return w  # embeddings / position table: rows are looked up
 
 
 def from_rows(name, r, model):
-    return r.T if (model == "ann" and name != "emb") else r
+    return r.T if (model == "ann" and name in ANN_QUANT and name != "emb") else r
 
 
 def qdq(name, w, bits, model):
@@ -148,11 +149,14 @@ def sensitivity(model, p, names, data, knobs):
 
 def allocate(model, p, names, sens, tier):
     allowed = sorted(tier["bits"])
+    # small tensors (output heads, encoders) cost a few KB: never below int8,
+    # they carry the calibrated outputs and are very sensitive to int4
+    floor = {n: 8 if p[n].data.size < SMALL and 8 in allowed else allowed[0] for n in names}
     ref, frac = tier["budget"]
     refbits = {"int8": 8, "fp16": 16, "fp32": 32}[ref]
     shape = {n: rows_of(n, p[n].data, model).shape for n in names}
     budget = frac * sum(nbytes(shape[n], refbits) for n in names)
-    alloc = {n: allowed[0] for n in names}
+    alloc = dict(floor)
     used = sum(nbytes(shape[n], alloc[n]) for n in names)
     while True:
         best = None
@@ -238,7 +242,8 @@ GOLDEN_TEXTS = [
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    nets = {"ann": (load("ann"), ANN_QUANT), "snn": (load("snn"), SNN_QUANT)}
+    ann, snn = load("ann"), load("snn")
+    nets = {"ann": (ann, ANN_QUANT), "snn": (snn, [n for n in SNN_QUANT if n in snn])}
     sens_data = eval_set(400, seed=777)
     test = eval_set(1000, seed=4242)
     texts, tg, va = test

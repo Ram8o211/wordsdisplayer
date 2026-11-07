@@ -1,0 +1,355 @@
+{
+ "format": "wdnn-1",
+ "model": "ann",
+ "tier": "desktop",
+ "config": {
+  "d": 64,
+  "heads": 4,
+  "ff": 192,
+  "layers": 2
+ },
+ "knobs": {
+  "ann_window": 32,
+  "snn_steps": 6
+ },
+ "constants": {
+  "concepts": [
+   "ocean",
+   "beach",
+   "forest",
+   "mountain",
+   "desert",
+   "city",
+   "space",
+   "night",
+   "rain",
+   "snow",
+   "fire",
+   "sunset",
+   "river",
+   "flowers",
+   "storm",
+   "underwater",
+   "technology",
+   "music",
+   "love",
+   "clouds",
+   "birds",
+   "fields"
+  ],
+  "annBuckets": 8192,
+  "annMaxLen": 48,
+  "snnAfferents": 4096,
+  "snnWordSpikes": 10,
+  "snnBigramSpikes": 2,
+  "snnWords": 20
+ },
+ "tensors": {
+  "emb": {
+   "shape": [
+    8192,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 0,
+   "length": 524288,
+   "scaleOffset": 524288,
+   "scaleLength": 32768
+  },
+  "pos": {
+   "shape": [
+    48,
+    64
+   ],
+   "dtype": "f32",
+   "offset": 557056,
+   "length": 12288
+  },
+  "b0.ln1.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 569344,
+   "length": 256
+  },
+  "b0.ln1.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 569600,
+   "length": 256
+  },
+  "b0.qkv": {
+   "shape": [
+    192,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 569856,
+   "length": 12288,
+   "scaleOffset": 582144,
+   "scaleLength": 768
+  },
+  "b0.qkv.b": {
+   "shape": [
+    192
+   ],
+   "dtype": "f32",
+   "offset": 582912,
+   "length": 768
+  },
+  "b0.o": {
+   "shape": [
+    64,
+    64
+   ],
+   "dtype": "f16",
+   "offset": 583680,
+   "length": 8192
+  },
+  "b0.o.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 591872,
+   "length": 256
+  },
+  "b0.ln2.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 592128,
+   "length": 256
+  },
+  "b0.ln2.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 592384,
+   "length": 256
+  },
+  "b0.f1": {
+   "shape": [
+    192,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 592640,
+   "length": 12288,
+   "scaleOffset": 604928,
+   "scaleLength": 768
+  },
+  "b0.f1.b": {
+   "shape": [
+    192
+   ],
+   "dtype": "f32",
+   "offset": 605696,
+   "length": 768
+  },
+  "b0.f2": {
+   "shape": [
+    64,
+    192
+   ],
+   "dtype": "f16",
+   "offset": 606464,
+   "length": 24576
+  },
+  "b0.f2.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 631040,
+   "length": 256
+  },
+  "b1.ln1.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 631296,
+   "length": 256
+  },
+  "b1.ln1.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 631552,
+   "length": 256
+  },
+  "b1.qkv": {
+   "shape": [
+    192,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 631808,
+   "length": 12288,
+   "scaleOffset": 644096,
+   "scaleLength": 768
+  },
+  "b1.qkv.b": {
+   "shape": [
+    192
+   ],
+   "dtype": "f32",
+   "offset": 644864,
+   "length": 768
+  },
+  "b1.o": {
+   "shape": [
+    64,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 645632,
+   "length": 4096,
+   "scaleOffset": 649728,
+   "scaleLength": 256
+  },
+  "b1.o.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 649984,
+   "length": 256
+  },
+  "b1.ln2.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 650240,
+   "length": 256
+  },
+  "b1.ln2.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 650496,
+   "length": 256
+  },
+  "b1.f1": {
+   "shape": [
+    192,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 650752,
+   "length": 12288,
+   "scaleOffset": 663040,
+   "scaleLength": 768
+  },
+  "b1.f1.b": {
+   "shape": [
+    192
+   ],
+   "dtype": "f32",
+   "offset": 663808,
+   "length": 768
+  },
+  "b1.f2": {
+   "shape": [
+    64,
+    192
+   ],
+   "dtype": "q8",
+   "group": 192,
+   "offset": 664576,
+   "length": 12288,
+   "scaleOffset": 676864,
+   "scaleLength": 256
+  },
+  "b1.f2.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 677120,
+   "length": 256
+  },
+  "lnf.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 677376,
+   "length": 256
+  },
+  "lnf.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 677632,
+   "length": 256
+  },
+  "h1m": {
+   "shape": [
+    64,
+    64
+   ],
+   "dtype": "f16",
+   "offset": 677888,
+   "length": 8192
+  },
+  "h1l": {
+   "shape": [
+    64,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 686080,
+   "length": 4096,
+   "scaleOffset": 690176,
+   "scaleLength": 256
+  },
+  "h1.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 690432,
+   "length": 256
+  },
+  "h2": {
+   "shape": [
+    24,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 690688,
+   "length": 1536,
+   "scaleOffset": 692224,
+   "scaleLength": 96
+  },
+  "h2.b": {
+   "shape": [
+    24
+   ],
+   "dtype": "f32",
+   "offset": 692320,
+   "length": 96
+  }
+ },
+ "bytes": 692416,
+ "file": "ann-desktop.bin"
+}

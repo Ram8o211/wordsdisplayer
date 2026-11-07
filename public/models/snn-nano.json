@@ -1,0 +1,185 @@
+{
+ "format": "wdnn-1",
+ "model": "snn",
+ "tier": "nano",
+ "config": {
+  "n1": 256,
+  "n2": 128
+ },
+ "knobs": {
+  "ann_window": 16,
+  "snn_steps": 2
+ },
+ "constants": {
+  "concepts": [
+   "ocean",
+   "beach",
+   "forest",
+   "mountain",
+   "desert",
+   "city",
+   "space",
+   "night",
+   "rain",
+   "snow",
+   "fire",
+   "sunset",
+   "river",
+   "flowers",
+   "storm",
+   "underwater",
+   "technology",
+   "music",
+   "love",
+   "clouds",
+   "birds",
+   "fields"
+  ],
+  "annBuckets": 8192,
+  "annMaxLen": 48,
+  "snnAfferents": 4096,
+  "snnWordSpikes": 10,
+  "snnBigramSpikes": 2,
+  "snnWords": 20
+ },
+ "tensors": {
+  "b1": {
+   "shape": [
+    256
+   ],
+   "dtype": "f32",
+   "offset": 0,
+   "length": 1024
+  },
+  "w_rec": {
+   "shape": [
+    256,
+    256
+   ],
+   "dtype": "q4",
+   "group": 32,
+   "offset": 1024,
+   "length": 32768,
+   "scaleOffset": 33792,
+   "scaleLength": 8192
+  },
+  "w_12": {
+   "shape": [
+    256,
+    128
+   ],
+   "dtype": "q4",
+   "group": 32,
+   "offset": 41984,
+   "length": 16384,
+   "scaleOffset": 58368,
+   "scaleLength": 4096
+  },
+  "b2": {
+   "shape": [
+    128
+   ],
+   "dtype": "f32",
+   "offset": 62464,
+   "length": 512
+  },
+  "w_out": {
+   "shape": [
+    128,
+    24
+   ],
+   "dtype": "q8",
+   "group": 24,
+   "offset": 62976,
+   "length": 3072,
+   "scaleOffset": 66048,
+   "scaleLength": 512
+  },
+  "b_out": {
+   "shape": [
+    24
+   ],
+   "dtype": "f32",
+   "offset": 66560,
+   "length": 96
+  },
+  "w_out1": {
+   "shape": [
+    256,
+    24
+   ],
+   "dtype": "q8",
+   "group": 24,
+   "offset": 66656,
+   "length": 6144,
+   "scaleOffset": 72800,
+   "scaleLength": 1024
+  },
+  "tau_m1": {
+   "shape": [
+    256
+   ],
+   "dtype": "f32",
+   "offset": 73824,
+   "length": 1024
+  },
+  "tau_a1": {
+   "shape": [
+    256
+   ],
+   "dtype": "f32",
+   "offset": 74848,
+   "length": 1024
+  },
+  "tau_m2": {
+   "shape": [
+    128
+   ],
+   "dtype": "f32",
+   "offset": 75872,
+   "length": 512
+  },
+  "beta1": {
+   "shape": [
+    256
+   ],
+   "dtype": "f32",
+   "offset": 76384,
+   "length": 1024
+  },
+  "tau_out": {
+   "shape": [
+    24
+   ],
+   "dtype": "f32",
+   "offset": 77408,
+   "length": 96
+  },
+  "w_in_a": {
+   "shape": [
+    4096,
+    26
+   ],
+   "dtype": "q4",
+   "group": 32,
+   "offset": 77504,
+   "length": 53248,
+   "scaleOffset": 130752,
+   "scaleLength": 16384
+  },
+  "w_in_e": {
+   "shape": [
+    26,
+    256
+   ],
+   "dtype": "q8",
+   "group": 256,
+   "offset": 147136,
+   "length": 6656,
+   "scaleOffset": 153792,
+   "scaleLength": 104
+  }
+ },
+ "bytes": 153896,
+ "file": "snn-nano.bin"
+}

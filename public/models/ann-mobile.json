@@ -1,0 +1,355 @@
+{
+ "format": "wdnn-1",
+ "model": "ann",
+ "tier": "mobile",
+ "config": {
+  "d": 64,
+  "heads": 4,
+  "ff": 192,
+  "layers": 2
+ },
+ "knobs": {
+  "ann_window": 24,
+  "snn_steps": 4
+ },
+ "constants": {
+  "concepts": [
+   "ocean",
+   "beach",
+   "forest",
+   "mountain",
+   "desert",
+   "city",
+   "space",
+   "night",
+   "rain",
+   "snow",
+   "fire",
+   "sunset",
+   "river",
+   "flowers",
+   "storm",
+   "underwater",
+   "technology",
+   "music",
+   "love",
+   "clouds",
+   "birds",
+   "fields"
+  ],
+  "annBuckets": 8192,
+  "annMaxLen": 48,
+  "snnAfferents": 4096,
+  "snnWordSpikes": 10,
+  "snnBigramSpikes": 2,
+  "snnWords": 20
+ },
+ "tensors": {
+  "emb": {
+   "shape": [
+    8192,
+    64
+   ],
+   "dtype": "q4",
+   "group": 32,
+   "offset": 0,
+   "length": 262144,
+   "scaleOffset": 262144,
+   "scaleLength": 65536
+  },
+  "pos": {
+   "shape": [
+    48,
+    64
+   ],
+   "dtype": "f32",
+   "offset": 327680,
+   "length": 12288
+  },
+  "b0.ln1.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 339968,
+   "length": 256
+  },
+  "b0.ln1.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 340224,
+   "length": 256
+  },
+  "b0.qkv": {
+   "shape": [
+    192,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 340480,
+   "length": 12288,
+   "scaleOffset": 352768,
+   "scaleLength": 768
+  },
+  "b0.qkv.b": {
+   "shape": [
+    192
+   ],
+   "dtype": "f32",
+   "offset": 353536,
+   "length": 768
+  },
+  "b0.o": {
+   "shape": [
+    64,
+    64
+   ],
+   "dtype": "f16",
+   "offset": 354304,
+   "length": 8192
+  },
+  "b0.o.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 362496,
+   "length": 256
+  },
+  "b0.ln2.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 362752,
+   "length": 256
+  },
+  "b0.ln2.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 363008,
+   "length": 256
+  },
+  "b0.f1": {
+   "shape": [
+    192,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 363264,
+   "length": 12288,
+   "scaleOffset": 375552,
+   "scaleLength": 768
+  },
+  "b0.f1.b": {
+   "shape": [
+    192
+   ],
+   "dtype": "f32",
+   "offset": 376320,
+   "length": 768
+  },
+  "b0.f2": {
+   "shape": [
+    64,
+    192
+   ],
+   "dtype": "f16",
+   "offset": 377088,
+   "length": 24576
+  },
+  "b0.f2.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 401664,
+   "length": 256
+  },
+  "b1.ln1.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 401920,
+   "length": 256
+  },
+  "b1.ln1.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 402176,
+   "length": 256
+  },
+  "b1.qkv": {
+   "shape": [
+    192,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 402432,
+   "length": 12288,
+   "scaleOffset": 414720,
+   "scaleLength": 768
+  },
+  "b1.qkv.b": {
+   "shape": [
+    192
+   ],
+   "dtype": "f32",
+   "offset": 415488,
+   "length": 768
+  },
+  "b1.o": {
+   "shape": [
+    64,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 416256,
+   "length": 4096,
+   "scaleOffset": 420352,
+   "scaleLength": 256
+  },
+  "b1.o.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 420608,
+   "length": 256
+  },
+  "b1.ln2.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 420864,
+   "length": 256
+  },
+  "b1.ln2.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 421120,
+   "length": 256
+  },
+  "b1.f1": {
+   "shape": [
+    192,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 421376,
+   "length": 12288,
+   "scaleOffset": 433664,
+   "scaleLength": 768
+  },
+  "b1.f1.b": {
+   "shape": [
+    192
+   ],
+   "dtype": "f32",
+   "offset": 434432,
+   "length": 768
+  },
+  "b1.f2": {
+   "shape": [
+    64,
+    192
+   ],
+   "dtype": "q8",
+   "group": 192,
+   "offset": 435200,
+   "length": 12288,
+   "scaleOffset": 447488,
+   "scaleLength": 256
+  },
+  "b1.f2.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 447744,
+   "length": 256
+  },
+  "lnf.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 448000,
+   "length": 256
+  },
+  "lnf.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 448256,
+   "length": 256
+  },
+  "h1m": {
+   "shape": [
+    64,
+    64
+   ],
+   "dtype": "f16",
+   "offset": 448512,
+   "length": 8192
+  },
+  "h1l": {
+   "shape": [
+    64,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 456704,
+   "length": 4096,
+   "scaleOffset": 460800,
+   "scaleLength": 256
+  },
+  "h1.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 461056,
+   "length": 256
+  },
+  "h2": {
+   "shape": [
+    24,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 461312,
+   "length": 1536,
+   "scaleOffset": 462848,
+   "scaleLength": 96
+  },
+  "h2.b": {
+   "shape": [
+    24
+   ],
+   "dtype": "f32",
+   "offset": 462944,
+   "length": 96
+  }
+ },
+ "bytes": 463040,
+ "file": "ann-mobile.bin"
+}

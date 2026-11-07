@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "train": "cd training && python3 train.py && python3 export.py",
+    "train": "cd training && python3 train.py --only ann && python3 design_snn.py && python3 export.py",
     "export-models": "cd training && python3 export.py",
     "electron": "npm run build && electron .",
     "dist:desktop": "npm run build && electron-builder",

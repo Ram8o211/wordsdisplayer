@@ -20,13 +20,16 @@ export class Director {
 
   update(r: Interpretation) {
     const order = [...r.probs.keys()].sort((a, b) => r.probs[b] - r.probs[a]);
-    this.target.fill(0);
+    const next = new Float32Array(NUM_CONCEPTS);
+    let any = false;
     for (let k = 0; k < this.maxLayers; k++) {
       const i = order[k];
       // hysteresis: a visible concept stays with a lower threshold
       const thr = this.weights[i] > 0.2 ? this.threshold * 0.6 : this.threshold;
-      if (r.probs[i] >= thr) this.target[i] = Math.min(1, 0.25 + r.probs[i]);
+      if (r.probs[i] >= thr) { next[i] = Math.min(1, 0.25 + r.probs[i]); any = true; }
     }
+    // small talk with nothing to show keeps the current scene on screen
+    if (any) this.target.set(next);
     this.tv = r.valence;
     this.ta = r.arousal;
   }

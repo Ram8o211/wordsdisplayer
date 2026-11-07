@@ -33,6 +33,7 @@ let listening = false;
 let last: EngineResult | null = null;
 let loaded: { tier: Tier; annBytes: number; snnBytes: number; annWindow: number; snnSteps: number } | null = null;
 let demoTimer: number | undefined;
+let maxScale = 1;
 const director = new Director();
 const mic = new Mic();
 const worker = new Worker(new URL("./nn/worker.ts", import.meta.url), { type: "module" });
@@ -48,7 +49,8 @@ function applyTier() {
   status(`loading ${tier} models…`);
   worker.postMessage({ type: "load", base: modelBase(), tier });
   const rs = { nano: 0.45, mobile: 0.6, desktop: 0.85, ultra: 1 }[tier];
-  renderer.scale = tierChoice === "auto" ? profile.renderScale : rs;
+  maxScale = tierChoice === "auto" ? profile.renderScale : rs;
+  renderer.scale = maxScale;
   renderer.quality = { nano: 3, mobile: 4, desktop: 5, ultra: 6 }[tier];
   director.maxLayers = { nano: 3, mobile: 4, desktop: 5, ultra: 6 }[tier];
 }
@@ -112,7 +114,7 @@ function updateStats() {
   const st = last?.stats;
   $("stats").textContent = [
     `device: ${profile.cores} cores, ${profile.memoryGB ?? "?"} GB, ${profile.mobile ? "mobile" : "desktop"}`,
-    `gpu: ${profile.gpu}`,
+    `gpu: ${profile.gpu}  · render scale ${renderer.scale.toFixed(2)}`,
     `js speed: ${profile.mflops} MFLOP/s  score ${profile.score} → auto tier "${profile.tier}"`,
     loaded ? `loaded tier: ${loaded.tier}  (ANN ${kb(loaded.annBytes)}, SNN ${kb(loaded.snnBytes)})` : "loading…",
     loaded ? `ANN window ${loaded.annWindow} words · SNN ${loaded.snnSteps} steps/word` : "",
@@ -218,9 +220,16 @@ function init() {
   $("demo").onclick = playDemo;
 
   let prev = performance.now();
+  let avg = 1 / 60, tuneAt = 0;
   const frame = (now: number) => {
     const dt = Math.min(0.1, (now - prev) / 1000);
     prev = now;
+    // dynamic resolution: keep ~50+ fps on weak GPUs, climb back when there is headroom
+    avg += (dt - avg) * 0.05;
+    if (now > tuneAt) {
+      if (avg > 1 / 45 && renderer.scale > 0.3) { renderer.scale = Math.max(0.3, renderer.scale * 0.85); tuneAt = now + 1000; }
+      else if (avg < 1 / 57 && renderer.scale < maxScale) { renderer.scale = Math.min(maxScale, renderer.scale * 1.1); tuneAt = now + 2000; }
+    }
     const au = mic.update();
     director.tick(dt, au);
     renderer.draw(now / 1000, director, au);

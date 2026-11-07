@@ -126,7 +126,7 @@ def snn_init(seed=1):
 INPUT_GAIN = lambda a, steps: 1 - a
 SURR = dict(gamma=0.5, slope=2.0)  # surrogate gradient shape
 
-SNN_QUANT = ["w_in", "w_rec", "w_12", "w_out", "w_out1"]
+SNN_QUANT = ["w_in", "w_in_a", "w_in_e", "w_rec", "w_12", "w_out", "w_out1"]  # those present
 SNN_TRAIN = ["w_in", "b1", "w_rec", "w_12", "b2", "w_out", "w_out1", "b_out"]
 
 
@@ -153,7 +153,9 @@ def snn_forward(p, X, steps, bits=None, return_rates=False, word_loss=None):
     Bn, W, _ = X.shape
     n1, n2 = SNN_CFG["n1"], SNN_CFG["n2"]
     q = (lambda n: fake_quant(p[n], bits.get(n) if bits else None, axis=1))
-    w_in, w_rec, w_12, w_out, w_out1 = q("w_in"), q("w_rec"), q("w_12"), q("w_out"), q("w_out1")
+    # input weights: dense (BPTT-trained) or factorised (designed: w_in_a @ w_in_e)
+    w_in = q("w_in_a") @ q("w_in_e") if "w_in_a" in p else q("w_in")
+    w_rec, w_12, w_out, w_out1 = q("w_rec"), q("w_12"), q("w_out"), q("w_out1")
     a1 = np.exp(-1.0 / (p["tau_m1"].data * steps)).astype(F)
     r1 = np.exp(-1.0 / (p["tau_a1"].data * steps)).astype(F)
     a2 = np.exp(-1.0 / (p["tau_m2"].data * steps)).astype(F)

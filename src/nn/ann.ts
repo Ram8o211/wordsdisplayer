@@ -1,6 +1,6 @@
 // Traditional network: 2-layer pre-LN Transformer encoder over the most
 // recent `window` words (port of training/models.py::ann_forward).
-import { annIds, tokenize, NUM_OUT } from "./text";
+import { annIds, tokenize, NUM_OUT, ANN_MAX_LEN } from "./text";
 import type { Manifest, Weights } from "./qtensor";
 
 export interface NetOutput {
@@ -26,6 +26,10 @@ export class TransformerNet {
   readonly ff: number;
   readonly layers: number;
   window: number;
+  // work buffers sized for the longest window, reused on every call
+  private bx: Float32Array; private by: Float32Array; private bqkv: Float32Array; private bo: Float32Array;
+  private batt: Float32Array; private btmp: Float32Array; private bhid: Float32Array;
+  private bmean: Float32Array; private bh1: Float32Array; private bh1l: Float32Array;
 
   constructor(private w: Weights, m: Manifest) {
     this.d = m.config.d;
@@ -33,6 +37,11 @@ export class TransformerNet {
     this.ff = m.config.ff;
     this.layers = m.config.layers;
     this.window = m.knobs.ann_window;
+    const L = ANN_MAX_LEN, d = this.d;
+    this.bx = new Float32Array(L * d); this.by = new Float32Array(L * d); this.bo = new Float32Array(L * d);
+    this.bqkv = new Float32Array(L * 3 * d); this.batt = new Float32Array(L);
+    this.btmp = new Float32Array(d); this.bhid = new Float32Array(this.ff);
+    this.bmean = new Float32Array(d); this.bh1 = new Float32Array(d); this.bh1l = new Float32Array(d);
   }
 
   /** Run on raw text (only the last `window` tokens are used). */
@@ -41,7 +50,7 @@ export class TransformerNet {
   }
 
   runTokens(allTokens: string[]): NetOutput {
-    const tokens = allTokens.slice(-this.window);
+    const tokens = allTokens.slice(-Math.min(this.window, ANN_MAX_LEN));
     const L = tokens.length;
     const { d, heads, ff } = this;
     const dh = d / heads;
@@ -57,19 +66,14 @@ export class TransformerNet {
     // the bigram of the first visible token must see its real predecessor
     const ids = annIds(allTokens.slice(-(L + 1)));
     const off = ids.uni.length - L;
-    const x = new Float32Array(L * d);
+    const x = this.bx; x.fill(0, 0, L * d);
     const pos = W["pos"];
     for (let j = 0; j < L; j++) {
       W["emb"].addRow(ids.uni[off + j], x, 1, j * d);
       W["emb"].addRow(ids.bi[off + j], x, 1, j * d);
       pos.addRow(L - 1 - j, x, 1, j * d);
     }
-    const y = new Float32Array(L * d);
-    const qkv = new Float32Array(L * 3 * d);
-    const att = new Float32Array(L);
-    const o = new Float32Array(L * d);
-    const tmp = new Float32Array(d);
-    const hid = new Float32Array(ff);
+    const y = this.by, qkv = this.bqkv, att = this.batt, o = this.bo, tmp = this.btmp, hid = this.bhid;
     const scale = 1 / Math.sqrt(dh);
     for (let i = 0; i < this.layers; i++) {
       const p = `b${i}.`;
@@ -114,10 +118,9 @@ export class TransformerNet {
     }
     const gf = W["lnf.g"].vector(), bf = W["lnf.b"].vector();
     for (let j = 0; j < L; j++) layerNorm(x, j * d, d, gf, bf, y, j * d);
-    const mean = new Float32Array(d);
+    const mean = this.bmean; mean.fill(0);
     for (let j = 0; j < L; j++) for (let c = 0; c < d; c++) mean[c] += y[j * d + c] / L;
-    const h1 = new Float32Array(d);
-    const h1l = new Float32Array(d);
+    const h1 = this.bh1, h1l = this.bh1l;
     W["h1m"].matvec(mean, h1, W["h1.b"].vector());
     W["h1l"].matvec(y, h1l, undefined, (L - 1) * d, 0);
     for (let c = 0; c < d; c++) h1[c] = gelu(h1[c] + h1l[c]);

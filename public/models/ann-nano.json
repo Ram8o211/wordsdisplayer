@@ -1,0 +1,364 @@
+{
+ "format": "wdnn-1",
+ "model": "ann",
+ "tier": "nano",
+ "config": {
+  "d": 64,
+  "heads": 4,
+  "ff": 192,
+  "layers": 2
+ },
+ "knobs": {
+  "ann_window": 16,
+  "snn_steps": 2
+ },
+ "constants": {
+  "concepts": [
+   "ocean",
+   "beach",
+   "forest",
+   "mountain",
+   "desert",
+   "city",
+   "space",
+   "night",
+   "rain",
+   "snow",
+   "fire",
+   "sunset",
+   "river",
+   "flowers",
+   "storm",
+   "underwater",
+   "technology",
+   "music",
+   "love",
+   "clouds",
+   "birds",
+   "fields"
+  ],
+  "annBuckets": 8192,
+  "annMaxLen": 48,
+  "snnAfferents": 4096,
+  "snnWordSpikes": 10,
+  "snnBigramSpikes": 2,
+  "snnWords": 20
+ },
+ "tensors": {
+  "emb": {
+   "shape": [
+    8192,
+    64
+   ],
+   "dtype": "q4",
+   "group": 32,
+   "offset": 0,
+   "length": 262144,
+   "scaleOffset": 262144,
+   "scaleLength": 65536
+  },
+  "pos": {
+   "shape": [
+    48,
+    64
+   ],
+   "dtype": "f32",
+   "offset": 327680,
+   "length": 12288
+  },
+  "b0.ln1.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 339968,
+   "length": 256
+  },
+  "b0.ln1.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 340224,
+   "length": 256
+  },
+  "b0.qkv": {
+   "shape": [
+    192,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 340480,
+   "length": 12288,
+   "scaleOffset": 352768,
+   "scaleLength": 768
+  },
+  "b0.qkv.b": {
+   "shape": [
+    192
+   ],
+   "dtype": "f32",
+   "offset": 353536,
+   "length": 768
+  },
+  "b0.o": {
+   "shape": [
+    64,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 354304,
+   "length": 4096,
+   "scaleOffset": 358400,
+   "scaleLength": 256
+  },
+  "b0.o.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 358656,
+   "length": 256
+  },
+  "b0.ln2.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 358912,
+   "length": 256
+  },
+  "b0.ln2.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 359168,
+   "length": 256
+  },
+  "b0.f1": {
+   "shape": [
+    192,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 359424,
+   "length": 12288,
+   "scaleOffset": 371712,
+   "scaleLength": 768
+  },
+  "b0.f1.b": {
+   "shape": [
+    192
+   ],
+   "dtype": "f32",
+   "offset": 372480,
+   "length": 768
+  },
+  "b0.f2": {
+   "shape": [
+    64,
+    192
+   ],
+   "dtype": "q8",
+   "group": 192,
+   "offset": 373248,
+   "length": 12288,
+   "scaleOffset": 385536,
+   "scaleLength": 256
+  },
+  "b0.f2.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 385792,
+   "length": 256
+  },
+  "b1.ln1.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 386048,
+   "length": 256
+  },
+  "b1.ln1.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 386304,
+   "length": 256
+  },
+  "b1.qkv": {
+   "shape": [
+    192,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 386560,
+   "length": 12288,
+   "scaleOffset": 398848,
+   "scaleLength": 768
+  },
+  "b1.qkv.b": {
+   "shape": [
+    192
+   ],
+   "dtype": "f32",
+   "offset": 399616,
+   "length": 768
+  },
+  "b1.o": {
+   "shape": [
+    64,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 400384,
+   "length": 4096,
+   "scaleOffset": 404480,
+   "scaleLength": 256
+  },
+  "b1.o.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 404736,
+   "length": 256
+  },
+  "b1.ln2.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 404992,
+   "length": 256
+  },
+  "b1.ln2.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 405248,
+   "length": 256
+  },
+  "b1.f1": {
+   "shape": [
+    192,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 405504,
+   "length": 12288,
+   "scaleOffset": 417792,
+   "scaleLength": 768
+  },
+  "b1.f1.b": {
+   "shape": [
+    192
+   ],
+   "dtype": "f32",
+   "offset": 418560,
+   "length": 768
+  },
+  "b1.f2": {
+   "shape": [
+    64,
+    192
+   ],
+   "dtype": "q8",
+   "group": 192,
+   "offset": 419328,
+   "length": 12288,
+   "scaleOffset": 431616,
+   "scaleLength": 256
+  },
+  "b1.f2.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 431872,
+   "length": 256
+  },
+  "lnf.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 432128,
+   "length": 256
+  },
+  "lnf.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 432384,
+   "length": 256
+  },
+  "h1m": {
+   "shape": [
+    64,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 432640,
+   "length": 4096,
+   "scaleOffset": 436736,
+   "scaleLength": 256
+  },
+  "h1l": {
+   "shape": [
+    64,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 436992,
+   "length": 4096,
+   "scaleOffset": 441088,
+   "scaleLength": 256
+  },
+  "h1.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 441344,
+   "length": 256
+  },
+  "h2": {
+   "shape": [
+    24,
+    64
+   ],
+   "dtype": "q8",
+   "group": 64,
+   "offset": 441600,
+   "length": 1536,
+   "scaleOffset": 443136,
+   "scaleLength": 96
+  },
+  "h2.b": {
+   "shape": [
+    24
+   ],
+   "dtype": "f32",
+   "offset": 443232,
+   "length": 96
+  }
+ },
+ "bytes": 443328,
+ "file": "ann-nano.bin"
+}
