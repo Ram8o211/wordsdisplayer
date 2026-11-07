@@ -79,6 +79,7 @@ export class Renderer {
   private ctx2d: CanvasRenderingContext2D | null = null;
   private prog: WebGLProgram | null = null;
   private ubo: WebGLBuffer | null = null;
+  private bankTex: WebGLTexture | null = null;
   private u: Record<string, WebGLUniformLocation | null> = {};
   private flash = 0;
   private lastTime = -1;
@@ -122,7 +123,16 @@ export class Renderer {
     const loc = gl.getAttribLocation(p, "p");
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    for (const n of ["R", "asp", "aa"]) this.u[n] = gl.getUniformLocation(p, n);
+    for (const n of ["R", "asp", "aa", "BANK"]) this.u[n] = gl.getUniformLocation(p, n);
+    // object experts' sine-neuron weights (frequency, phase, two readouts) as an RGBA32F table
+    const t = this.net.bankTex;
+    if (this.bankTex) gl.deleteTexture(this.bankTex);
+    this.bankTex = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.bankTex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, t.width, t.height, 0, gl.RGBA, gl.FLOAT, t.data);
     gl.uniformBlockBinding(p, gl.getUniformBlockIndex(p, "Params"), 0);
     this.ubo ??= gl.createBuffer();
     gl.bindBuffer(gl.UNIFORM_BUFFER, this.ubo);
@@ -173,6 +183,9 @@ export class Renderer {
     gl.uniform2f(this.u.R, W, H);
     gl.uniform1f(this.u.asp, W / H);
     gl.uniform1f(this.u.aa, 2.2 * H); // edge neurons: ~1.5 px transition at any resolution
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.bankTex);
+    gl.uniform1i(this.u.BANK, 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 }

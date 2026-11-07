@@ -27,6 +27,7 @@
 // sharpness). Shapes and colours themselves are produced by the network.
 import { FrameNet, PixelNet, Param, type PL } from "./graph";
 import { CONCEPTS } from "../../nn/text";
+import OBJECTS from "./objects.json";
 
 const TAU = Math.PI * 2;
 export const FORM_DIM = 8;
@@ -104,20 +105,26 @@ export function wordKick(hash: number): Float32Array {
   return v.map((x) => x / n);
 }
 
-/** Layer widths per tier: [Fourier, hidden 1, hidden 2, paint channels] */
-export const WIDTHS = [[12, 10, 8, 3], [16, 12, 10, 4], [20, 16, 12, 4], [28, 20, 16, 5]] as const;
+/** Layer widths per tier: [Fourier, hidden 1, hidden 2, paint channels, sine neurons per object expert] */
+export const WIDTHS = [[14, 12, 10, 4, 40], [20, 16, 12, 4, 64], [24, 20, 16, 5, 80], [32, 24, 20, 6, 128]] as const;
+
+interface ObjectPart {
+  concept: string; name: string; depth: number; c0: number[]; c1: number[];
+  box: number[]; at: number[]; win: boolean[]; vx: number; vy: number; osc: number[];
+  emissive: boolean; alpha: string; kick: number; mean: number; shadeMean: number; modes: number[][];
+}
 
 export function design(detail = 2): PixelNet {
   const F = new FrameNet();
   const N = new PixelNet(F);
   const { X, Y, X2, Y2 } = N;
-  const [N1, N2, N3, K] = WIDTHS[Math.max(0, Math.min(3, detail))];
+  const [N1, N2, N3, K, KB] = WIDTHS[Math.max(0, Math.min(3, detail))];
 
   // ------------------------------------------------ hypernetwork inputs
   const C = CONCEPTS.map((c) => F.input(c));
   const val = F.input("val"), aro = F.input("aro");
   const rms = F.input("rms"), mid = F.input("mid"), flux = F.input("flux");
-  const flash = F.input("flash"), iasp = F.input("iasp");
+  const flash = F.input("flash"), iasp = F.input("iasp"), zoom = F.input("zoom");
   const words = Array.from({ length: FORM_DIM }, (_, k) => F.input("w" + k));
   const add = (...p: PL[]) => F.add(...p), sub = (a: PL, b: PL) => F.sub(a, b);
   const mul = (a: PL, b: PL) => F.mul(a, b), sc = (a: PL, k: number) => F.scale(a, k);
@@ -214,6 +221,47 @@ export function design(detail = 2): PixelNet {
       add(-0.4 - 0.25 * k, fbias(Bo[k], 0.6)), `paint ${k}`, gOut);
     N.layer({ name: `paint ${k}`, gate: paint, shade: h3[k % N3], c0: rgb(sc(Lk, 0.8), a, b), c1: rgb(Lk, sc(a, 1.2), sc(b, 1.2)), alpha: 0.92 });
   }
+  // ------------------------------------------------ object experts (spectral sine networks, closed-form weights)
+  // Weights = Fourier coefficients of object prototypes (training/design_video.py).
+  // The hypernetwork moves each object by shifting its local coordinates, so the
+  // same sine neurons generate it at every position (sailing, rising, falling,
+  // drifting, flickering); heard words nudge single objects sideways.
+  {
+    const parts = (OBJECTS as { blur: number; parts: ObjectPart[] }).parts;
+    const blur = (OBJECTS as { blur: number }).blur;
+    // portrait screens see a zoomed-out scene so objects stay in view
+    const Xs = N.n("lin", [[X, zoom]], 0, "scene x");
+    const Ys = N.n("lin", [[Y, zoom]], sc(sub(1, zoom), 0.5), "scene y");
+    const dim = sub(1, sc(clip(add(C[CONCEPTS.indexOf("night")], sc(C[CONCEPTS.indexOf("space")], 0.9), sc(C[CONCEPTS.indexOf("storm")], 0.5))), 0.6));
+    const total = clip(add(...C));
+    // the abstract atmosphere recedes behind recognisable objects
+    for (const l of N.layers) if (l.name.startsWith("paint")) l.alpha = add(0.92, sc(total, -0.6));
+    parts.forEach((p, idx) => {
+      const ci = CONCEPTS.indexOf(p.concept as never);
+      const wrapX = p.win[0] ? 3.6 : p.box[0], wrapY = p.win[1] ? 2.2 : p.box[1];
+      const disp = (v: number, wrap: number) => (v ? sc(F.integrate(TAU * v / wrap), wrap / TAU) : add(0));
+      const osc = p.osc[2] ? F.sin(F.integrate(p.osc[2])) : add(0);
+      const dx = add(disp(p.vx, wrapX), sc(osc, p.osc[0]), sc(words[idx % FORM_DIM], p.kick));
+      const dy = add(disp(p.vy, wrapY), sc(F.cos(F.integrate(p.osc[2] || 1)), p.osc[1]));
+      const u = N.n("lin", [[Xs, 1]], sub(-p.at[0], dx), `${p.name} u`);
+      const v = N.n("lin", [[Ys, 1]], sub(-p.at[1], dy), `${p.name} v`);
+      const [m, sh] = N.bank(p.modes, u, v, p.name);
+      let gate = N.n("edge", [[m, 2 * blur]], (p.mean - 0.5) * 2 * blur, `${p.name} mask`);
+      // windows: show one copy of a single object (the spectral field is periodic in its tile)
+      if (p.win[0]) gate = N.prod(gate, N.n("edge", [[N.n("abs", [[u, 1]]), -1]], 0.48 * p.box[0]));
+      if (p.win[1]) gate = N.prod(gate, N.n("edge", [[N.n("abs", [[v, 1]]), -1]], 0.48 * p.box[1]));
+      // a soft threshold removes the spectral ringing of two-tone shading
+      const shade = N.n("sig", [[sh, 7]], 7 * (p.shadeMean - 0.5));
+      const lit = p.emissive ? 1 : dim;
+      // opacity floor: objects of topics that are fading out are skipped for the whole frame
+      // (conditional computation) instead of costing a full sine bank at ~1% opacity
+      const on = clip(sc(sub(C[ci], 0.1), 1 / 0.9));
+      const alpha = p.alpha === "flash" ? mul(flash, on) : on;
+      N.layer({ name: `${p.concept}: ${p.name}`, gate, shade, c0: p.c0.map((c) => sc(lit, c)), c1: p.c1.map((c) => sc(lit, c)), alpha });
+    });
+    N.bankK = KB;
+  }
+
   // voice: glow from the centre with loudness / mid band
   N.layer({ name: "voice glow", gate: N.n("gauss", [[R, 2.2]]), c0: rgb(L, ca, cb), alpha: add(sc(rms, 0.25), sc(mid, 0.1)), add: true });
 
@@ -244,6 +292,8 @@ export function frameInputs(o: FrameState): Record<string, number> {
   const r: Record<string, number> = {
     val: o.valence, aro: o.arousal, rms: o.audio.rms, low: o.audio.low, mid: o.audio.mid, flux: o.audio.flux,
     dt: o.dt, flash: o.flash, asp: o.aspect, iasp: 1 / o.aspect,
+    // portrait / narrow screens: zoom out so the scene's objects stay visible
+    zoom: Math.max(1, Math.sqrt(1.6 / o.aspect)),
   };
   CONCEPTS.forEach((c, i) => (r[c] = o.concepts[i] ?? 0));
   for (let k = 0; k < FORM_DIM; k++) r["w" + k] = o.form?.[k] ?? 0;

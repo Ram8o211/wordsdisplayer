@@ -15,7 +15,7 @@ pixel by pixel:
 | **Traditional** | 2-layer Transformer encoder | conventional ANN |
 | **Neuromorphic** | recurrent adaptive-LIF spiking neural network | event-driven SNN |
 | **Hybrid** | both, confidence-weighted fusion + optional event gating | — |
-| *(always)* | **neural video generator**: hypernetwork + per-pixel generative network (CPPN), weights assigned in closed form | Fourier → tanh → sigmoid |
+| *(always)* | **neural video generator**: hypernetwork + per-pixel network (45 spectral object experts + CPPN atmosphere), weights assigned in closed form | sine / tanh / sigmoid |
 
 Both networks ship in four precision tiers (int4 → fp32). The app benchmarks
 the device and picks the best tier the hardware can sustain, so a budget phone
@@ -29,10 +29,10 @@ mic ─► speech-to-text (offline) ─► words ─┬─► Transformer (ANN) 
  └─► DSP features (loudness, bands, onsets) ─────────────────────────────────────────┘ (CPU, per frame)   (GPU, per pixel)
 ```
 
-No video clips, sprites, shape templates or per-concept drawing code exist.
-Every pixel of every frame is computed by the generator network, whose forms
-and colours emerge from its dynamics, steered by what the speech networks
-heard.
+No video clips or sprites are stored or played back. Every pixel of every
+frame is computed by the generator network. Its object experts draw
+recognisable objects coherent with what is heard, and its atmosphere network
+adds emergent forms and colours.
 
 ---
 
@@ -266,10 +266,13 @@ People speak ~2–3 words/s, so even a phone 10× slower than this has 30× head
 * **Event-gated hybrid**: the Transformer is skipped while the SNN reports a
   stable topic.
 * **Tier-scaled compute**: ANN window 16→48 words, SNN steps 2→8, video
-  generator 40→76 neurons (376→1230 MACs per pixel), max scene concepts 3→6.
-* **Video generator weights are mostly constants** folded into the shader;
-  only ~140–270 generated weights per frame are uploaded, and the network's
-  smooth output tolerates low render scales on weak GPUs.
+  generator 40→128 sine neurons per object and a wider atmosphere network
+  (~830→2660 MACs per pixel), max scene concepts 3→6.
+* **Video generator weights are mostly static**: object sine tables live in a
+  texture uploaded once and constant CPPN weights are folded into the shader,
+  so only ~300–440 generated weights are uploaded per frame. Objects of topics
+  that are fading out are skipped, and the band-limited output tolerates low
+  render scales on weak GPUs.
 * **Dynamic resolution**: the renderer lowers its resolution when frames take
   longer than 1/45 s and raises it again when there is headroom.
 
@@ -298,124 +301,136 @@ still talking.
 
 ## 7. Network 3: the neural video generator (assigned weights)
 
-The video is generated **pixel by pixel, in real time, by a neural network
-that has no notion of objects**. It contains no sprites, clips, shape
-templates or per-concept drawing code: no "sun neuron" and no "tree neuron".
-Shapes and colours **emerge** from the network's dynamics, and what is heard
-steers those dynamics. As with the spiking network, the **weights are assigned
-in closed form, never trained** (`src/render/neural/design.ts`).
+The video is generated **pixel by pixel, in real time, by neural networks**,
+and **every weight is assigned in closed form, never trained by gradient
+descent**. Nothing is played back: there are no clips, sprites or image files,
+and no per-object drawing code. What is heard sets the hypernetwork's inputs.
+The hypernetwork generates the per-frame weights of a per-pixel network, which
+computes every pixel.
 
-**Why not a trained generator.** Pixel-level video models (diffusion, video
-transformers) need GB-sized weights and desktop GPUs, and are far from real
-time on a phone. Training even a small generator would need paired
-speech/video data. An assigned generative network runs at 60 fps with
-40–76 neurons and needs no data.
+The per-pixel network has two kinds of experts:
 
-### Architecture
+* **Object experts** (45, one or more per concept): spectral sine networks
+  that generate **recognisable objects** coherent with what is heard. A sentence
+  about sailing gives a sailboat on the sea with gulls overhead. Other objects
+  include a moon with stars over a lit skyline, a campfire, a snowman, a ringed
+  planet with a rocket, fish among seaweed, a beach umbrella and palm, pyramids
+  and a cactus, a farmhouse in crop fields, a robot, floating hearts, musical
+  notes, firs, rain, snow and lightning.
+* **Atmosphere** (an enlarged CPPN): abstract emergent forms and colours behind
+  the objects. They follow the mood (valence, arousal), the voice and the
+  heard words, and recede when recognisable objects are on screen.
 
 ```
-semantic code (22 concept weights, valence, arousal) + heard-word latent + voice features
+semantic code (22 concepts, valence, arousal) + heard-word latent + voice
    │
-   ▼  HYPERNETWORK (CPU, once per frame, ~200 units, ~50 µs)
-   │   semantic code → 12 visual statistics (synesthetic prior) → layer gains, basis scale/anisotropy,
-   │   symmetry, flow velocity, turbulence, palette;  concept identities + word kicks → 8-d form latent;
-   │   integrator neurons accumulate the phases (smooth motion even while the rates change)
+   ▼  HYPERNETWORK (CPU, once per frame, ~350 units, ~50–100 µs)
+   │   object opacities and motion (integrated phases: sail, rise, fall, drift, bob, flicker),
+   │   word kicks, CPPN gains/scale/flow/symmetry/palette, grading
    ▼
- ~140–270 generated weights → uniform buffer
+ ~300–440 generated weights (uniform buffer)  +  object sine weights (RGBA32F texture)
    │
-   ▼  PIXEL NETWORK = CPPN (GPU fragment shader, once per pixel)
- [x, |x|, y, r]  ─►  Fourier layer: N1 sines (golden-angle orientations, log-spaced radii over 4 octaves,
-                     + 2 slow warp sines for turbulence)
-                 ─►  tanh layer N2 ─► tanh layer N3   (orthogonal weights; gain and biases generated per frame)
-                 ─►  K sigmoid "paint" channels      (sharpness generated per frame)
-                 ─►  layered colour: c ← c + p_k·(palette_k(shade) − c), palette generated per frame
-                 ─►  grading (arousal contrast, onset pulse, lightning) · vignette
+   ▼  PIXEL NETWORK (GPU fragment shader)
+ [x, y, x², y², xy] ─┬─ CPPN atmosphere: Fourier → tanh → tanh → K sigmoid paint channels
+                     └─ per object expert, skipped for the whole frame when its topic is not heard:
+                          local coords u, v (generated shift) ─► KB sine neurons ─► mask readout ─► edge neuron
+                                                                         └────► shade readout ─► logistic
+                          × window neurons (one copy) ─► gated depth compositing (c ← c + g·α·(colour − c))
+                     ─► colour grading (valence, arousal, onsets, lightning) · vignette
 ```
 
-| Tier | Fourier / tanh / tanh / paint | Neurons | Synapses | Generated weights | MAC per pixel | sin/tanh/exp per pixel |
-|---|---|---|---|---|---|---|
-| nano | 12 / 10 / 8 / 3 | 40 | 319 | 143 | 376 | 38 |
-| mobile | 16 / 12 / 10 / 4 | 49 | 471 | 179 | 537 | 47 |
-| desktop | 20 / 16 / 12 / 4 | 59 | 707 | 211 | 773 | 57 |
-| ultra | 28 / 20 / 16 / 5 | 76 | 1155 | 274 | 1230 | 74 |
+### Weight assignment for the object experts (`training/design_video.py`)
 
-### How the weights are assigned
+Each object expert computes
 
-* **Fourier layer.** Frequencies follow a deterministic multi-scale basis:
-  orientation `i·137.5°` (golden angle, even coverage) and radius
-  `2^(4i/(N1−1))`. The hypernetwork scales the basis (spatial scale),
-  squeezes it along x (stratification, which yields horizon-like bands), mixes
-  `x` with `|x|` (bilateral symmetry), feeds it two slow warp sines
-  (turbulence), and drives each phase through an integrator neuron with rate
-  `−k·v` (the pattern flows with velocity `v`), plus shimmer and onset kicks.
-* **tanh layers.** Weights are fixed orthonormal matrices (Gram–Schmidt on a
-  seeded Gaussian), so signal variance is preserved layer to layer. The layer
-  **gain** is generated from the "complexity" latent. By the mean-field theory
-  of deep random networks, a gain near 1 gives smooth, ordered forms and a
-  gain of 3–4 gives intricate, chaotic ones. Voice loudness and arousal push
-  it up. Every **bias** is an orthogonal projection of the 8-d form latent, so
-  each concept and each heard word moves the network to a different attractor.
-* **Paint channels.** These are sigmoids of orthogonal readouts. Their gain
-  (soft gradients vs. crisp shapes) comes from the "sharpness" latent, and
-  each channel gets its own palette colour.
-* **Palette.** It is generated in an opponent colour space (red–green,
-  yellow–blue, lightness). The hue comes from the semantic code, chroma and
-  warmth from valence, and harmonic hue spacing (analogous → contrasting) from
-  turbulence. Lightness steps are spread evenly over the channels.
-* **The only meaning→appearance knowledge** is `SYNESTHESIA`: 12 low-level
-  statistics per concept (hue tendency, lightness, chroma, complexity, scale,
-  flow x/y, turbulence, stratification, symmetry, sharpness). For example, fire
-  is warm, upward-flowing, turbulent and complex; ocean is blue, horizontally
-  flowing and stratified; love is warm and symmetric. These are tendencies of
-  the generator, not pictures. The concept weights blend them, so "a storm
-  over the sea at night" mixes the statistics and the network invents the
-  forms.
-* **Heard words.** Every word (≥3 letters) gives the form latent a
-  deterministic kick derived from its hash, which decays with τ ≈ 4 s. The
-  imagery reacts to each word, and the same sentence always gives the same
-  family of images.
+    field(u, v) = mean + Σ_k a_k · sin(wx_k·u + wy_k·v + φ_k),      shade(u, v) = Σ_k b_k · sin(same neuron)
+
+The weights are obtained in one closed-form step, the same way
+`design_snn.py` fits its readout:
+
+1. An analytic prototype of the object (a signed-distance description built
+   from discs, boxes, polygons, capsules and implicit curves) is rasterised in
+   the object's own **periodic tile**. Small objects get small tiles, so their
+   spectrum is coarse and a few dozen neurons capture them.
+2. The tile is Fourier-transformed. The KB largest coefficients become the
+   neurons: frequency → input weights `(wx, wy)`, magnitude → readout weight
+   `a`.
+3. The neuron phase serves both the silhouette and the shading:
+   `ψ = ½·arg(F² + λG²)` maximises the energy they explain jointly. The
+   shading readout `b` is the orthogonal projection of the shading prototype
+   on each neuron.
+4. Neurons are sorted by importance, so each tier keeps the first KB. 40
+   neurons reproduce most silhouettes within a few percent of their area
+   (`design_video.py` prints the error per object and tier).
+
+**Run-time behaviour comes from the hypernetwork, not from new weights.** Each
+neuron's phase is explicit, so moving an object only shifts the expert's local
+input coordinates (a generated bias). The same neurons then regenerate the
+object at its new position: boats sail, rockets rise, rain and snow fall,
+clouds drift, birds and flames bob and flicker. Window neurons (`|u| < w`,
+`|v| < h`) keep a single copy of an object, and tiled experts (trees, rain,
+flakes, bubbles) repeat on purpose. Heard words nudge single objects sideways,
+so the same scene is arranged differently for different sentences. Portrait
+screens get a zoomed-out scene so objects stay in view.
+
+### Atmosphere CPPN
+
+Fourier features on golden-angle orientations and log-spaced radii feed two
+orthogonal `tanh` layers and sigmoid paint channels. The hypernetwork drives
+them from a 12-number "synesthetic" profile per concept (hue tendency,
+lightness, complexity = layer gain, scale, flow, turbulence, stratification,
+symmetry, sharpness), from valence/arousal and voice, and from an 8-d form
+latent (concept identities plus a deterministic kick per heard word). Its
+shapes are emergent, not drawn.
+
+### Size and cost per tier
+
+The atmosphere widths are Fourier / tanh / tanh / paint channels. MAC and
+sin/exp counts are per pixel, mean (max) over 14 scenes with the experts that
+are actually on (`npx vitest run tests/bench.test.ts`).
+
+| Tier | Atmosphere | Sine neurons per object | Weights (incl. object tables) | MAC per pixel | sin/exp per pixel | Typical render size | GPU load @30 fps |
+|---|---|---|---|---|---|---|---|
+| nano | 14/12/10/4 | 40 | 9.7 k | 830 (1156) | 110 | 288×162 | 1.2 GMAC/s |
+| mobile | 20/16/12/4 | 64 | 15.4 k | 1280 (1786) | 158 | 768×432 | 12.7 GMAC/s |
+| desktop | 24/20/16/5 | 80 | 19.4 k | 1757 (2383) | 195 | 1632×918 | 79 GMAC/s |
+| ultra | 32/24/20/6 | 128 | 30.7 k | 2662 (3648) | 284 | 1920×1080 | 166 GMAC/s |
+
+* **Low-end first.** Nano needs ~1.2 GMAC/s, a few percent of an entry-level
+  mobile GPU. The object experts carry most of the recognisability, so the low
+  tiers keep 40–64 neurons per object, enough for clean silhouettes. Fine
+  detail (palm fronds, notes, flakes) and atmosphere width are what get cut.
+* **Conditional computation.** Experts whose topic is below 10 % opacity are
+  skipped for the whole frame by a uniform branch, so cost follows what is on
+  screen rather than the 45 experts in the network. Dynamic resolution keeps
+  ~50 fps on weak GPUs. The forms are band-limited, so they upscale well.
+* **Weights that change per frame stay small.** Only ~300–440 generated
+  weights are uploaded per frame. The 45 × KB sine-neuron tables sit in a
+  texture uploaded once per tier, and the CPPN's constant weights are folded
+  into the shader.
+* **CPU fallback.** Without WebGL2, the nano network runs as compiled JS at
+  ~200 px wide (~40 ms for 160×90).
 
 ### Compilation: the same network on GPU and CPU
 
-`src/render/neural/compile.ts` turns the network graph into a kernel:
+`src/render/neural/compile.ts` turns the network graph into a GLSL fragment
+shader and into a JS kernel:
 
-* Only non-zero synapses are emitted, and constant weights become literals
-  that the GPU compiler folds. Only the weights the hypernetwork generates live
-  in a uniform buffer (≤ 1.1 KB, far below the 16 KB WebGL2 minimum).
-  Modulated layers use a per-neuron gain (FiLM), so the large weight matrices
-  stay constant.
-* Phases are integrated and wrapped to [−π, π) on the CPU in float64, so long
-  sessions keep full precision on mobile GPUs.
-* The same graph also compiles to a JavaScript kernel. It is used when WebGL2
-  is missing (smallest network, ~200 px wide, upscaled) and is checked
-  against a reference interpreter.
-
-### Quality / complexity trade-off
-
-* The forms are smooth at the pixel scale (band-limited sines through
-  smooth activations). Rendering below native resolution and letting the
-  browser upscale therefore loses little, which is why low tiers combine a
-  small network with a low render scale. Typical GPU load at 30 fps: nano
-  0.5 GMAC/s (288×162), mobile 5 GMAC/s (768×432), desktop 35 GMAC/s
-  (1632×918), ultra 77 GMAC/s (1080p). Dynamic resolution keeps ~50 fps on weak
-  GPUs.
-* Higher tiers add Fourier features (finer detail), width (more distinct forms
-  per frame) and paint channels (richer palettes). Every tier keeps the same
-  semantic behaviour, because the latent→dynamics mapping does not depend on
-  width.
-* The hypernetwork costs ~50 µs per frame. The JS fallback renders 160×90 in
-  ~13 ms with the nano network.
+* only non-zero synapses are emitted, and constant weights become literals;
+* spectral banks are evaluated by a loop over the texture;
+* each expert sits behind a uniform branch on its generated opacity;
+* phases are integrated and wrapped in float64 on the CPU.
 
 `tests/render.test.ts` checks the following:
 
-* the compiled kernel equals the reference interpreter;
-* the output is coherent with what is heard: fire is warm, ocean cool, forest
-  green, night darker than snow, and positive valence warmer;
-* "love" is bilaterally symmetric and "desert" is horizontally stratified;
-* output is reproducible, and different words give different forms;
-* the video moves, and faster with arousal;
-* when Playwright/Chromium is available, the GLSL kernel on WebGL2 matches the
-  CPU kernel within 1/255.
+* the kernels equal a reference interpreter;
+* objects appear where and in the colour their prototypes say: crescent moon,
+  white sail over a brown hull on blue water, snowman with a dark hat, yellow
+  flames, green cactus, red heart;
+* colour, symmetry, stratification and motion follow what is heard;
+* output is reproducible, and words change it;
+* when Playwright/Chromium is available, the WebGL2 shader matches the CPU
+  kernel within 1/255.
 
 ---
 
@@ -430,6 +445,7 @@ cd training
 python3 train.py --only ann --steps-ann 6000   # Transformer (~15 min on CPU)
 python3 design_snn.py                          # spiking net: assigned weights + fitted readout (~15 s); --search tunes the dynamics
 python3 export.py                              # sensitivity analysis, 4 tiers, report, golden vectors
+python3 design_video.py                        # video object experts: closed-form spectral weights (~10 s)
 cd .. && npm test                              # TS ↔ NumPy parity
 ```
 
@@ -457,8 +473,9 @@ src/nn/engine.ts     modes, event gating, tier loading (runs in a Web Worker: wo
 src/nn/device.ts     hardware profiler → tier
 src/asr/             speech-to-text front-ends
 src/audio/mic.ts     microphone DSP features
-src/render/neural/   video generator: graph.ts (hypernetwork + pixel network), design.ts (CPPN weight assignment,
-                     synesthetic prior), compile.ts (sparse GLSL / JS kernel generation, per-frame weights, cost model)
+src/render/neural/   video generator: graph.ts (hypernetwork + pixel network), design.ts (object experts, CPPN,
+                     synesthetic prior), objects.json (closed-form object weights from training/design_video.py),
+                     compile.ts (sparse GLSL / JS kernel generation, spectral banks, per-frame weights, cost model)
 src/render/          scene director + WebGL2 renderer (CPU fallback when WebGL2 is missing)
 training/            dataset, autodiff, models, ANN training, SNN weight construction, quantisation/export
 public/models/       exported tiers (*.json manifest + *.bin weights) + report.json

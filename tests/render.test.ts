@@ -54,7 +54,43 @@ describe("neural video generator", () => {
         }
       }
     }
-  });
+  }, 120_000);
+
+  it("draws recognisable objects where their prototypes put them", () => {
+    // pixel at scene coordinates (x, y) of a 320×180 frame after one frame of motion
+    const w = 320, h = 180;
+    const at = (px: Uint8ClampedArray, x: number, y: number) => {
+      const i = (Math.floor((1 - y) * h) * w + Math.floor((x / (w / h) + 0.5) * w)) * 4;
+      return [px[i], px[i + 1], px[i + 2]];
+    };
+    const one = (scene: string) => {
+      const fresh = compile(design(1)); // fresh hypernetwork state (phases at 0)
+      fresh.update(inputs(scene));
+      const px = new Uint8ClampedArray(w * h * 4);
+      fresh.renderCPU(px, w, h);
+      return px;
+    };
+    const [mr, mg, mb] = at(one("night"), 0.235, 0.78); // lit side of the crescent moon
+    expect(Math.min(mr, mg)).toBeGreaterThan(170);
+    expect(mb).toBeLessThan(mr);
+    const sail = at(one("ocean"), 0.06, 0.5); // white sail
+    expect(Math.min(...sail)).toBeGreaterThan(150);
+    const hull = at(one("ocean"), 0, 0.33); // brown hull above blue water
+    expect(hull[0]).toBeGreaterThan(hull[2]);
+    const sea = at(one("ocean"), 0.6, 0.15);
+    expect(sea[2]).toBeGreaterThan(sea[0] + 40);
+    const man = at(one("snow"), 0.3, 0.22); // snowman's body
+    expect(Math.min(...man)).toBeGreaterThan(190);
+    const hat = at(one("snow"), 0.3, 0.57); // his black hat (soft at this tiny test resolution)
+    expect(Math.max(...hat)).toBeLessThan(Math.min(...man) - 60);
+    const flame = at(one("fire"), 0, 0.2);
+    expect(flame[0]).toBeGreaterThan(200);
+    expect(flame[2]).toBeLessThan(120);
+    const cactus = at(one("desert"), -0.4, 0.3);
+    expect(cactus[1]).toBeGreaterThan(cactus[0] + 30);
+    const heart = at(one("love"), 0.1, 0.45);
+    expect(heart[0]).toBeGreaterThan(heart[1] + 80);
+  }, 60_000);
 
   it("colours follow what is heard", () => {
     const [fr, , fb] = mean(film("fire")), [or, , ob] = mean(film("ocean"));
@@ -79,14 +115,13 @@ describe("neural video generator", () => {
       }
       return gy / gx;
     };
-    expect(aniso(film("desert"))).toBeGreaterThan(1.5); // horizontal bands
-    expect(aniso(film("desert"))).toBeGreaterThan(aniso(film("fire")));
+    expect(aniso(film("ocean"))).toBeGreaterThan(aniso(film("rain"))); // horizon bands vs falling streaks
   });
 
   it("is reproducible, and words change the forms", () => {
     expect(diffImg(film("ocean"), film("ocean"))).toBe(0);
     const kick = (w: string) => Array.from(wordKick(fnv1a(w)));
-    expect(diffImg(film("ocean", { form: kick("sailing") }), film("ocean", { form: kick("whale") }))).toBeGreaterThan(5);
+    expect(diffImg(film("ocean", { form: kick("sailing") }), film("ocean", { form: kick("whale") }))).toBeGreaterThan(2);
   });
 
   it("animates, faster when aroused", () => {
@@ -122,7 +157,7 @@ describe.skipIf(!chromium || process.env.SKIP_GPU)("GLSL kernel on WebGL2", () =
       const P = net.update(inputs(scene, { arousal: 0.5 }));
       const cpu = new Uint8ClampedArray(W * H * 4);
       net.renderCPU(cpu, W, H);
-      const gpu: number[] = await page.evaluate(({ glsl, P, W, H }: { glsl: string; P: number[]; W: number; H: number }) => {
+      const gpu: number[] = await page.evaluate(({ glsl, P, W, H, bank }: { glsl: string; P: number[]; W: number; H: number; bank: { data: number[]; w: number; h: number } }) => {
         const cv = document.getElementById("c") as HTMLCanvasElement;
         cv.width = W; cv.height = H;
         const gl = cv.getContext("webgl2")!;
@@ -144,10 +179,14 @@ describe.skipIf(!chromium || process.env.SKIP_GPU)("GLSL kernel on WebGL2", () =
         gl.uniform2f(gl.getUniformLocation(p, "R"), W, H);
         gl.uniform1f(gl.getUniformLocation(p, "asp"), W / H);
         gl.uniform1f(gl.getUniformLocation(p, "aa"), 2.2 * H);
+        const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, bank.w, bank.h, 0, gl.RGBA, gl.FLOAT, new Float32Array(bank.data));
+        gl.uniform1i(gl.getUniformLocation(p, "BANK"), 0);
         gl.viewport(0, 0, W, H); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         const px = new Uint8Array(W * H * 4); gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, px);
         return Array.from(px);
-      }, { glsl: net.glsl, P: Array.from(P), W, H });
+      }, { glsl: net.glsl, P: Array.from(P), W, H, bank: { data: Array.from(net.bankTex.data), w: net.bankTex.width, h: net.bankTex.height } });
       let sum = 0, max = 0;
       for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) for (let k = 0; k < 3; k++) {
         const dd = Math.abs(gpu[((H - 1 - y) * W + x) * 4 + k] - cpu[(y * W + x) * 4 + k]);

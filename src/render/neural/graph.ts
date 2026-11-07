@@ -26,7 +26,7 @@
 // whole frame (uniform branch), so per-pixel cost scales with what is on screen.
 
 export type FAct = "id" | "clip" | "relu" | "sin" | "cos" | "sig" | "abs" | "inv" | "tanh";
-export type Act = "input" | "lin" | "sin" | "sig" | "edge" | "abs" | "rcp" | "relu" | "clip" | "sqrt" | "prod" | "tanh" | "gauss";
+export type Act = "input" | "lin" | "sin" | "sig" | "edge" | "abs" | "rcp" | "relu" | "clip" | "sqrt" | "prod" | "tanh" | "gauss" | "bank" | "bank2";
 
 /** A weight of the pixel network: c + Σ coef · frameUnit. */
 export class Param {
@@ -156,7 +156,9 @@ export interface Neuron {
   b: Param;
   /** optional gain applied to the weighted sum before the bias (FiLM-style modulation) */
   g?: Param;
-  /** product units: indices of the two factors */
+  /** spectral bank: row in the bank table (inputs: [u, v] local coordinates) */
+  bankRow?: number;
+  /** product units (and bank2: the bank neuron whose second readout this is) */
   pa?: number;
   pb?: number;
   name?: string;
@@ -182,6 +184,13 @@ export class PixelNet {
   layers: Layer[] = [];
   /** 3x3 colour matrix (row-major) + offset, generated per frame */
   grade: { M: Param[]; o: Param[] } = { M: [1, 0, 0, 0, 1, 0, 0, 0, 1].map(asP), o: [0, 0, 0].map(asP) };
+  /**
+   * Spectral sine banks: row r holds K modes [wx, wy, phi, a, b]; a bank neuron
+   * outputs Σ a·sin(wx·u + wy·v + phi) and its bank2 twin Σ b·sin(...). Weights
+   * that large are kept in a float texture instead of being emitted as code.
+   */
+  banks: number[][][] = [];
+  bankK = 0;
   /** multiplicative output neuron (vignette), -1 = none */
   vignette = -1;
   readonly X = 0; readonly Y = 1; readonly X2 = 2; readonly Y2 = 3; readonly XY = 4;
@@ -191,6 +200,13 @@ export class PixelNet {
   n(act: Exclude<Act, "input" | "prod">, terms: [number, PL][], bias: PL = 0, name?: string, gain?: PL): number {
     const t = terms.map(([src, w]) => ({ src, w: asP(w) })).filter((x) => !(x.w.isConst && x.w.c === 0));
     return this.neurons.push({ act, in: t, b: asP(bias), name, g: gain === undefined ? undefined : asP(gain) }) - 1;
+  }
+  /** spectral sine bank over local coordinates (u, v): returns [readout a, readout b] */
+  bank(modes: number[][], u: number, v: number, name?: string): [number, number] {
+    const row = this.banks.push(modes) - 1;
+    const i = this.neurons.push({ act: "bank", in: [{ src: u, w: new Param(1) }, { src: v, w: new Param(1) }], b: new Param(0), bankRow: row, name }) - 1;
+    const j = this.neurons.push({ act: "bank2", in: [], b: new Param(0), pa: i, pb: i, name: name && name + " shade" }) - 1;
+    return [i, j];
   }
   prod(a: number, b: number, name?: string): number {
     return this.neurons.push({ act: "prod", in: [], b: new Param(0), pa: a, pb: b, name }) - 1;
