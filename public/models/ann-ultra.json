@@ -1,0 +1,328 @@
+{
+ "format": "wdnn-1",
+ "model": "ann",
+ "tier": "ultra",
+ "config": {
+  "d": 64,
+  "heads": 4,
+  "ff": 192,
+  "layers": 2
+ },
+ "knobs": {
+  "ann_window": 48,
+  "snn_steps": 8
+ },
+ "constants": {
+  "concepts": [
+   "ocean",
+   "beach",
+   "forest",
+   "mountain",
+   "desert",
+   "city",
+   "space",
+   "night",
+   "rain",
+   "snow",
+   "fire",
+   "sunset",
+   "river",
+   "flowers",
+   "storm",
+   "underwater",
+   "technology",
+   "music",
+   "love",
+   "clouds",
+   "birds",
+   "fields"
+  ],
+  "annBuckets": 8192,
+  "annMaxLen": 48,
+  "snnAfferents": 4096,
+  "snnWordSpikes": 10,
+  "snnBigramSpikes": 2,
+  "snnWords": 20
+ },
+ "tensors": {
+  "emb": {
+   "shape": [
+    8192,
+    64
+   ],
+   "dtype": "f32",
+   "offset": 0,
+   "length": 2097152
+  },
+  "pos": {
+   "shape": [
+    48,
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2097152,
+   "length": 12288
+  },
+  "b0.ln1.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2109440,
+   "length": 256
+  },
+  "b0.ln1.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2109696,
+   "length": 256
+  },
+  "b0.qkv": {
+   "shape": [
+    192,
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2109952,
+   "length": 49152
+  },
+  "b0.qkv.b": {
+   "shape": [
+    192
+   ],
+   "dtype": "f32",
+   "offset": 2159104,
+   "length": 768
+  },
+  "b0.o": {
+   "shape": [
+    64,
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2159872,
+   "length": 16384
+  },
+  "b0.o.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2176256,
+   "length": 256
+  },
+  "b0.ln2.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2176512,
+   "length": 256
+  },
+  "b0.ln2.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2176768,
+   "length": 256
+  },
+  "b0.f1": {
+   "shape": [
+    192,
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2177024,
+   "length": 49152
+  },
+  "b0.f1.b": {
+   "shape": [
+    192
+   ],
+   "dtype": "f32",
+   "offset": 2226176,
+   "length": 768
+  },
+  "b0.f2": {
+   "shape": [
+    64,
+    192
+   ],
+   "dtype": "f32",
+   "offset": 2226944,
+   "length": 49152
+  },
+  "b0.f2.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2276096,
+   "length": 256
+  },
+  "b1.ln1.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2276352,
+   "length": 256
+  },
+  "b1.ln1.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2276608,
+   "length": 256
+  },
+  "b1.qkv": {
+   "shape": [
+    192,
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2276864,
+   "length": 49152
+  },
+  "b1.qkv.b": {
+   "shape": [
+    192
+   ],
+   "dtype": "f32",
+   "offset": 2326016,
+   "length": 768
+  },
+  "b1.o": {
+   "shape": [
+    64,
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2326784,
+   "length": 16384
+  },
+  "b1.o.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2343168,
+   "length": 256
+  },
+  "b1.ln2.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2343424,
+   "length": 256
+  },
+  "b1.ln2.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2343680,
+   "length": 256
+  },
+  "b1.f1": {
+   "shape": [
+    192,
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2343936,
+   "length": 49152
+  },
+  "b1.f1.b": {
+   "shape": [
+    192
+   ],
+   "dtype": "f32",
+   "offset": 2393088,
+   "length": 768
+  },
+  "b1.f2": {
+   "shape": [
+    64,
+    192
+   ],
+   "dtype": "f32",
+   "offset": 2393856,
+   "length": 49152
+  },
+  "b1.f2.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2443008,
+   "length": 256
+  },
+  "lnf.g": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2443264,
+   "length": 256
+  },
+  "lnf.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2443520,
+   "length": 256
+  },
+  "h1m": {
+   "shape": [
+    64,
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2443776,
+   "length": 16384
+  },
+  "h1l": {
+   "shape": [
+    64,
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2460160,
+   "length": 16384
+  },
+  "h1.b": {
+   "shape": [
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2476544,
+   "length": 256
+  },
+  "h2": {
+   "shape": [
+    24,
+    64
+   ],
+   "dtype": "f32",
+   "offset": 2476800,
+   "length": 6144
+  },
+  "h2.b": {
+   "shape": [
+    24
+   ],
+   "dtype": "f32",
+   "offset": 2482944,
+   "length": 96
+  }
+ },
+ "bytes": 2483040,
+ "file": "ann-ultra.bin"
+}

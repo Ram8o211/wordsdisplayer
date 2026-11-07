@@ -1,0 +1,179 @@
+{
+ "format": "wdnn-1",
+ "model": "snn",
+ "tier": "mobile",
+ "config": {
+  "n1": 256,
+  "n2": 128
+ },
+ "knobs": {
+  "ann_window": 24,
+  "snn_steps": 4
+ },
+ "constants": {
+  "concepts": [
+   "ocean",
+   "beach",
+   "forest",
+   "mountain",
+   "desert",
+   "city",
+   "space",
+   "night",
+   "rain",
+   "snow",
+   "fire",
+   "sunset",
+   "river",
+   "flowers",
+   "storm",
+   "underwater",
+   "technology",
+   "music",
+   "love",
+   "clouds",
+   "birds",
+   "fields"
+  ],
+  "annBuckets": 8192,
+  "annMaxLen": 48,
+  "snnAfferents": 4096,
+  "snnWordSpikes": 10,
+  "snnBigramSpikes": 2,
+  "snnWords": 20
+ },
+ "tensors": {
+  "b1": {
+   "shape": [
+    256
+   ],
+   "dtype": "f32",
+   "offset": 0,
+   "length": 1024
+  },
+  "w_rec": {
+   "shape": [
+    256,
+    256
+   ],
+   "dtype": "q8",
+   "group": 256,
+   "offset": 1024,
+   "length": 65536,
+   "scaleOffset": 66560,
+   "scaleLength": 1024
+  },
+  "w_12": {
+   "shape": [
+    256,
+    128
+   ],
+   "dtype": "q4",
+   "group": 32,
+   "offset": 67584,
+   "length": 16384,
+   "scaleOffset": 83968,
+   "scaleLength": 4096
+  },
+  "b2": {
+   "shape": [
+    128
+   ],
+   "dtype": "f32",
+   "offset": 88064,
+   "length": 512
+  },
+  "w_out": {
+   "shape": [
+    128,
+    24
+   ],
+   "dtype": "f16",
+   "offset": 88576,
+   "length": 6144
+  },
+  "b_out": {
+   "shape": [
+    24
+   ],
+   "dtype": "f32",
+   "offset": 94720,
+   "length": 96
+  },
+  "w_out1": {
+   "shape": [
+    256,
+    24
+   ],
+   "dtype": "f16",
+   "offset": 94816,
+   "length": 12288
+  },
+  "tau_m1": {
+   "shape": [
+    256
+   ],
+   "dtype": "f32",
+   "offset": 107104,
+   "length": 1024
+  },
+  "tau_a1": {
+   "shape": [
+    256
+   ],
+   "dtype": "f32",
+   "offset": 108128,
+   "length": 1024
+  },
+  "tau_m2": {
+   "shape": [
+    128
+   ],
+   "dtype": "f32",
+   "offset": 109152,
+   "length": 512
+  },
+  "beta1": {
+   "shape": [
+    256
+   ],
+   "dtype": "f32",
+   "offset": 109664,
+   "length": 1024
+  },
+  "tau_out": {
+   "shape": [
+    24
+   ],
+   "dtype": "f32",
+   "offset": 110688,
+   "length": 96
+  },
+  "w_in_a": {
+   "shape": [
+    4096,
+    26
+   ],
+   "dtype": "q4",
+   "group": 32,
+   "offset": 110784,
+   "length": 53248,
+   "scaleOffset": 164032,
+   "scaleLength": 16384
+  },
+  "w_in_e": {
+   "shape": [
+    26,
+    256
+   ],
+   "dtype": "q8",
+   "group": 256,
+   "offset": 180416,
+   "length": 6656,
+   "scaleOffset": 187072,
+   "scaleLength": 104
+  }
+ },
+ "bytes": 187176,
+ "file": "snn-mobile.bin"
+}

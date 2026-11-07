@@ -1,0 +1,179 @@
+{
+ "format": "wdnn-1",
+ "model": "snn",
+ "tier": "desktop",
+ "config": {
+  "n1": 256,
+  "n2": 128
+ },
+ "knobs": {
+  "ann_window": 32,
+  "snn_steps": 6
+ },
+ "constants": {
+  "concepts": [
+   "ocean",
+   "beach",
+   "forest",
+   "mountain",
+   "desert",
+   "city",
+   "space",
+   "night",
+   "rain",
+   "snow",
+   "fire",
+   "sunset",
+   "river",
+   "flowers",
+   "storm",
+   "underwater",
+   "technology",
+   "music",
+   "love",
+   "clouds",
+   "birds",
+   "fields"
+  ],
+  "annBuckets": 8192,
+  "annMaxLen": 48,
+  "snnAfferents": 4096,
+  "snnWordSpikes": 10,
+  "snnBigramSpikes": 2,
+  "snnWords": 20
+ },
+ "tensors": {
+  "b1": {
+   "shape": [
+    256
+   ],
+   "dtype": "f32",
+   "offset": 0,
+   "length": 1024
+  },
+  "w_rec": {
+   "shape": [
+    256,
+    256
+   ],
+   "dtype": "q8",
+   "group": 256,
+   "offset": 1024,
+   "length": 65536,
+   "scaleOffset": 66560,
+   "scaleLength": 1024
+  },
+  "w_12": {
+   "shape": [
+    256,
+    128
+   ],
+   "dtype": "q8",
+   "group": 128,
+   "offset": 67584,
+   "length": 32768,
+   "scaleOffset": 100352,
+   "scaleLength": 1024
+  },
+  "b2": {
+   "shape": [
+    128
+   ],
+   "dtype": "f32",
+   "offset": 101376,
+   "length": 512
+  },
+  "w_out": {
+   "shape": [
+    128,
+    24
+   ],
+   "dtype": "f16",
+   "offset": 101888,
+   "length": 6144
+  },
+  "b_out": {
+   "shape": [
+    24
+   ],
+   "dtype": "f32",
+   "offset": 108032,
+   "length": 96
+  },
+  "w_out1": {
+   "shape": [
+    256,
+    24
+   ],
+   "dtype": "f16",
+   "offset": 108128,
+   "length": 12288
+  },
+  "tau_m1": {
+   "shape": [
+    256
+   ],
+   "dtype": "f32",
+   "offset": 120416,
+   "length": 1024
+  },
+  "tau_a1": {
+   "shape": [
+    256
+   ],
+   "dtype": "f32",
+   "offset": 121440,
+   "length": 1024
+  },
+  "tau_m2": {
+   "shape": [
+    128
+   ],
+   "dtype": "f32",
+   "offset": 122464,
+   "length": 512
+  },
+  "beta1": {
+   "shape": [
+    256
+   ],
+   "dtype": "f32",
+   "offset": 122976,
+   "length": 1024
+  },
+  "tau_out": {
+   "shape": [
+    24
+   ],
+   "dtype": "f32",
+   "offset": 124000,
+   "length": 96
+  },
+  "w_in_a": {
+   "shape": [
+    4096,
+    26
+   ],
+   "dtype": "q8",
+   "group": 26,
+   "offset": 124096,
+   "length": 106496,
+   "scaleOffset": 230592,
+   "scaleLength": 16384
+  },
+  "w_in_e": {
+   "shape": [
+    26,
+    256
+   ],
+   "dtype": "q8",
+   "group": 256,
+   "offset": 246976,
+   "length": 6656,
+   "scaleOffset": 253632,
+   "scaleLength": 104
+  }
+ },
+ "bytes": 253736,
+ "file": "snn-desktop.bin"
+}

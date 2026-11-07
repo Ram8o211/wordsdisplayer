@@ -1,0 +1,9 @@
+node_modules/
+dist/
+release/
+android/
+ios/
+training/checkpoints/
+training/__pycache__/
+training/*.log
+*.tsbuildinfo

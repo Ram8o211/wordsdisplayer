@@ -1,0 +1,51 @@
+{
+  "name": "wordsdisplayer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Speech-to-video: on-device traditional (Transformer) and neuromorphic (spiking) networks turn live speech into a coherent generative video.",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "train": "cd training && python3 train.py --only ann && python3 design_snn.py && python3 export.py",
+    "export-models": "cd training && python3 export.py",
+    "electron": "npm run build && electron .",
+    "dist:desktop": "npm run build && electron-builder",
+    "cap:sync": "npm run build && cap sync",
+    "cap:android": "npm run cap:sync && cap open android",
+    "cap:ios": "npm run cap:sync && cap open ios"
+  },
+  "dependencies": {
+    "@capacitor-community/speech-recognition": "^7.0.1",
+    "@capacitor/android": "^7.4.0",
+    "@capacitor/core": "^7.4.0",
+    "@capacitor/ios": "^7.4.0",
+    "vosk-browser": "^0.0.8"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.0",
+    "@types/node": "^22.20.5",
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.0",
+    "typescript": "~5.9.0",
+    "vite": "^7.1.0",
+    "vitest": "^3.2.0"
+  },
+  "build": {
+    "appId": "com.wordsdisplayer.app",
+    "productName": "WordsDisplayer",
+    "files": [
+      "dist/**",
+      "electron/**"
+    ],
+    "mac": {
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "WordsDisplayer listens to speech to generate video."
+      }
+    }
+  }
+}
