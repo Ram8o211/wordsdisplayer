@@ -40,6 +40,15 @@ npm run dev            # http://localhost:5173 (allow the microphone)
 * `?demo` autoplays the narration. `?scene=ocean,sunset&v=0.5&a=-0.2` previews a scene directly.
 * `npm test` checks the TypeScript inference against the NumPy reference for all tiers.
 
+### Web (GitHub Pages)
+
+`.github/workflows/pages.yml` tests, builds and deploys the app to GitHub Pages
+on every push to `main`. One-time setup: **Settings → Pages → Build and
+deployment → Source: GitHub Actions**. The app is then at
+`https://<user>.github.io/wordsdisplayer/` (HTTPS, so the microphone works).
+Open it with `?demo` to see it without speaking. On a phone you can
+"Add to Home Screen" and it runs as an installable, offline-capable PWA.
+
 ### Desktop (Electron)
 
 ```bash
