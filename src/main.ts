@@ -51,7 +51,8 @@ function applyTier() {
   const rs = { nano: 0.45, mobile: 0.6, desktop: 0.85, ultra: 1 }[tier];
   maxScale = tierChoice === "auto" ? profile.renderScale : rs;
   renderer.scale = maxScale;
-  renderer.quality = { nano: 3, mobile: 4, desktop: 5, ultra: 6 }[tier];
+  // the video generator network itself is sized per tier (Fourier octaves, sub-experts)
+  renderer.setDetail({ nano: 0, mobile: 1, desktop: 2, ultra: 3 }[tier]);
   director.maxLayers = { nano: 3, mobile: 4, desktop: 5, ultra: 6 }[tier];
 }
 
@@ -79,6 +80,7 @@ worker.onmessage = (ev) => {
 
 function feed(words: string) {
   worker.postMessage({ type: "text", text: words });
+  director.hear(words);
 }
 
 // ---------------------------------------------------------------- UI: captions
@@ -123,7 +125,19 @@ function updateStats() {
     st ? `SNN spike rate ${(st.spikeRate * 100).toFixed(1)}% · ANN runs ${st.annRuns}, gated skips ${st.annSkips}` : "",
     last?.hybridWeightAnn !== undefined ? `fusion weight: Transformer ${(last.hybridWeightAnn * 100).toFixed(0)}% / SNN ${(100 - last.hybridWeightAnn * 100).toFixed(0)}%` : "",
     last ? `valence ${last.final.valence.toFixed(2)} · arousal ${last.final.arousal.toFixed(2)}` : "",
+    videoStats(),
   ].filter(Boolean).join("\n");
+}
+
+function videoStats(): string {
+  const z = renderer.net.size, c = renderer.cost();
+  const px = renderer.backend === "webgl2" ? (document.getElementById("scene") as HTMLCanvasElement) : null;
+  const gmac = px ? (c.macs * px.width * px.height * 60) / 1e9 : 0;
+  return [
+    `video net (${renderer.backend}, detail ${renderer.detail}): ${z.neurons} neurons, ${z.synapses} synapses, ${z.layers} experts, ${z.dynamicParams} generated weights/frame`,
+    `this frame: ${c.activeLayers}/${c.totalLayers} experts on · ${c.neurons} neurons, ${c.macs} MAC, ${c.transcendental} sin/exp per pixel` +
+      (px ? ` · ${px.width}×${px.height} → ${gmac.toFixed(2)} GMAC/s @60fps` : ""),
+  ].join("\n");
 }
 
 // ---------------------------------------------------------------- listening
@@ -220,7 +234,7 @@ function init() {
   $("demo").onclick = playDemo;
 
   let prev = performance.now();
-  let avg = 1 / 60, tuneAt = 0;
+  let avg = 1 / 60, tuneAt = 0, statsAt = 0;
   const frame = (now: number) => {
     const dt = Math.min(0.1, (now - prev) / 1000);
     prev = now;
@@ -233,6 +247,7 @@ function init() {
     const au = mic.update();
     director.tick(dt, au);
     renderer.draw(now / 1000, director, au);
+    if (now > statsAt) { statsAt = now + 1000; updateStats(); }
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
