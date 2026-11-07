@@ -28,4 +28,4 @@ it("latency per word", () => {
     rows.push(`${tier.padEnd(8)} ANN ${ta.toFixed(3)} ms/word (window ${ann.window})  SNN ${ts.toFixed(3)} ms/word (T=${snn.steps}, spike rate ${(snn.spikeRate * 100).toFixed(2)}%, ${(snn.sops / 2020 / 1000).toFixed(1)}k SOPs/word)  MACs ANN ${(ann.macs(ann.window) / 1e6).toFixed(2)}M`);
   }
   console.log(rows.join("\n"));
-});
+}, 120_000);
