@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#05060c" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <title>WordsDisplayer – speech to video</title>
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+    <div id="captions"><div id="concepts"></div><div id="transcript">Press ● and start talking…</div></div>
+
+    <header id="bar">
+      <button id="mic" class="round" title="Start / stop listening">●</button>
+      <div class="seg" id="mode" role="radiogroup" aria-label="Network">
+        <button data-mode="ann" title="Transformer (traditional ANN)">Traditional</button>
+        <button data-mode="snn" title="Spiking neural network (neuromorphic)">Neuromorphic</button>
+        <button data-mode="hybrid" title="Both, confidence-weighted fusion">Hybrid</button>
+      </div>
+      <button id="toggle-panel" class="round" title="Settings &amp; stats">⚙</button>
+    </header>
+
+    <aside id="panel" hidden>
+      <h3>Settings</h3>
+      <label>Precision tier
+        <select id="tier">
+          <option value="auto">Auto (detect hardware)</option>
+          <option value="nano">nano – int4/int8, phones</option>
+          <option value="mobile">mobile – int4/int8/fp16</option>
+          <option value="desktop">desktop – int8/fp16</option>
+          <option value="ultra">ultra – fp32</option>
+        </select>
+      </label>
+      <label>Speech recogniser
+        <select id="asr">
+          <option value="vosk">Vosk (offline, WebAssembly)</option>
+          <option value="native">Native on-device (Android/iOS)</option>
+          <option value="web">Web Speech API</option>
+          <option value="text">None (type below)</option>
+        </select>
+      </label>
+      <label>Language
+        <select id="lang"><option value="en">English</option><option value="it">Italiano</option></select>
+      </label>
+      <label class="row"><input type="checkbox" id="gated" checked /> Hybrid: event-gated Transformer (SNN wakes it on topic change)</label>
+      <form id="typed"><input id="typed-text" placeholder="…or type a sentence and press Enter" autocomplete="off" /></form>
+      <button id="demo">▶ Play demo narration</button>
+      <h3>Networks</h3>
+      <div id="bars"></div>
+      <h3>Device &amp; runtime</h3>
+      <pre id="stats"></pre>
+    </aside>
+    <div id="status"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
